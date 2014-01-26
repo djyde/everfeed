@@ -1,0 +1,187 @@
+<html>
+	<head>
+		<meta charset='utf-8'>
+		<title>EverFeed</title>
+		<script type="text/javascript" src="bower_components/angular/angular.min.js"></script>
+		<script type="text/javascript" src="bower_components/jquery/jquery.min.js"></script>
+		<script type="text/javascript" src="bower_components/storedb/storedb.js"></script>
+		<script type="text/javascript" src="bower_components/jquery-rss/dist/jquery.rss.min.js"></script>
+		<script type="text/javascript" src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="bower_components/bootstrap/dist/css/bootstrap.min.css" />
+		<link rel="stylesheet" type="text/css" href="static/typo.css">
+		<style>
+		img {
+			max-width:100%;
+			height:auto;
+		}
+
+		</style>
+		<script type="text/javascript">
+
+			var parseRSS = function(url){
+				jQuery(function($){
+					$(".collapse").collapse()
+					$("#content").rss(url,{
+						limit: 20,
+						tokens: {
+							ti: function(tokens){return tokens.feed}
+						},
+						layoutTemplate:
+						'<div class="pannel-group" id="accordion">{entries}</div>',									
+						entryTemplate:
+						'<div class="panel panel-default typo"><div class="panel-heading"><h4 class="panel-title"> <a data-toggle="collapse" data-parent="#accordion" href="#{index}"><strong>{title}</strong></a></h4></div><div id={index} class="panel-collapse collapse"><div class="panel-body"><p><span class="label label-info">本文作者：{author}</span><span class="pull-right">{date}</span><p><a href={url}>原文地址：{url}</a></p></p>{body}</div></div></div>'
+					})
+				})
+			}
+
+			//angular
+
+			var app = angular.module('feed',[]);
+
+			var FeedListCtrl = function($scope){
+				$scope.lists = storedb('feed').find();
+				$scope.listShow = function(url,row){
+					document.getElementById('content').innerHTML = ""
+					$scope.listRow = row;
+					$scope.recomRow = -1;
+					parseRSS(url)
+				}
+				$scope.recomShow = function(url,row){
+					document.getElementById('content').innerHTML = ""
+					$scope.recomRow = row;
+					$scope.listRow = -1;
+					parseRSS(url)
+				}
+				$scope.test = function(){
+					alert('a')
+				}
+				$scope.addFeed = function(url,name){
+					storedb('feed').insert({"feedName":name,"feedURL":url},function(err,res){
+						if(!err){
+							jQuery(function($){
+								$('#addFeed').modal('hide')
+							})
+							$scope.lists = storedb('feed').find();
+						}
+					})
+				}
+				$scope.removeFeed = function(id){
+					storedb('feed').remove({"_id":id},function(err){
+						if(!err){
+							$scope.lists = storedb('feed').find();
+						}
+					})
+				}
+				$scope.addToList = function(url,name){
+					storedb('feed').insert({"feedName":name,"feedURL":url},function(err,res){
+						if(!err){
+							$scope.lists = storedb('feed').find();
+						}
+					})
+				}
+				$scope.recommendation = [
+					{
+						"feedName": "知乎每日精选",
+						"feedURL": "http://www.zhihu.com/rss"
+					},
+					{
+						"feedName": "果壳网 - 科技有意思",
+						"feedURL": "http://www.guokr.com/rss/"
+					},
+					{
+						"feedName": "一个 - 韩寒",
+						"feedURL": "http://onehd.herokuapp.com/"
+					},
+					{
+						"feedName": "科学松鼠会 - 剥开科学的坚果",
+						"feedURL": "http://songshuhui.net/feed"
+					}
+				]
+			}
+
+		</script>
+	</head>
+	<body ng-app="feed" data-spy="scroll" data-target=".nav-example">
+		<nav class="navbar navbar-default" role="banner">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="#">EverFeed</a>
+
+			</div>
+			<strong class="navbar-text">为阅读而生</strong>
+			<a class="navbar-text" href="https://github.com/djyde/EverFeed">开源在Github</a>
+			<span class="navbar-text">By <a href="http://djyde.github.io">Randy</a></span>
+		</nav>
+		<div class="container">
+			<div id="layout" class="container">
+				<div class="row">
+					
+					<div id="sidebar" class="sidebar col-md-4" ng-controller="FeedListCtrl">
+
+						<h4 style="margin-bottom: 10px;">
+							<span>Feed List</span>
+							<span class="glyphicon glyphicon-plus small" style="text-decoration: none; cursor: pointer" data-toggle="modal" data-target="#addFeed"></span>
+						</h4>
+						<ul class="nav-example nav nav-pills nav-stacked" ng-repeat="list in lists">
+
+  						<li ng-class="{active: $index==listRow}">
+    						<a href="javascript:void()" ng-click="listShow(list.feedURL,$index)">
+
+      						{{list.feedName}}
+      						<button type="button" class="close pull-right" aria-hidden="true" ng-click="removeFeed(list._id)">&times;</button>
+    						</a>
+    						
+  						</li>
+  					</ul>
+
+  					<h4 style="margin-bottom: 10px; margin-top: 10px;">
+							<span>推荐阅读</span>
+						</h4>
+						<ul class="nav-example nav nav-pills nav-stacked" ng-repeat="list in recommendation">
+  						<li ng-class="{active: $index==recomRow}">
+    						<a href="javascript:void()" ng-click="recomShow(list.feedURL,$index)">
+      						{{list.feedName}}
+      						<span type="button" class="glyphicon glyphicon-plus pull-right" aria-hidden="true" ng-click="addToList(list.feedURL,list.feedName)"></span>
+    						</a>
+    						
+  						</li>
+  					</ul>
+
+  					<div class="modal fade" id="addFeed" tabindex="-1" role="dialog" aria-labelledby="addFeed" aria-hidden="true">
+  					<div class="modal-dialog">
+    					<div class="modal-content">
+      					<div class="modal-header">
+        					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        					<h4 class="modal-title" id="addFeed">添加RSS源</h4>
+      					</div>
+      					<div class="modal-body">
+        					<form class="form-horizontal" id="addFeedDlg" role="form">
+          					<div class="form-group">
+            					<label for="url">RSS地址：</label>
+            					<input type="text" id="url" class="form-control" ng-model="url"/>
+          					</div>
+          					<div class="form-group">
+            					<label for="name">标题：</label>
+            					<input type="text" id="name" class="form-control" ng-model="name"/>
+          					</div>
+        					</form>
+      					</div>
+      					<div class="modal-footer">
+        					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        					<button type="button" class="btn btn-primary" ng-click="addFeed(url,name)">Add</button>
+      					</div>
+    					</div><!-- /.modal-content -->
+  					</div><!-- /.modal-dialog -->
+					</div><!-- /.modal -->
+					</div>
+
+					
+				
+					<div id="content" class="col-md-8">
+						
+					</div>
+				
+				</div>	
+			</div>
+		</div>
+	</body>
+</html>
